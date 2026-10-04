@@ -1,0 +1,40 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 0 auto;">
+  <h2 style="margin-bottom: 20px;">Enter Marks</h2>
+  <form method="POST">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Student</label>
+      <select name="student" required>
+        {% for st in students %}<option value="{{ st.id }}">{{ st.username }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Subject</label>
+      <select name="subject" required>
+        {% for sub in subjects %}<option value="{{ sub.id }}">{{ sub.code }} - {{ sub.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Exam Type</label>
+      <select name="exam_type">
+        <option value="MIDTERM">Mid-Term</option>
+        <option value="FINAL">Final Exam</option>
+        <option value="ASSIGNMENT">Assignment</option>
+      </select>
+    </div>
+    <div style="display: flex; gap: 15px;">
+      <div class="form-group" style="flex: 1;">
+        <label>Marks Obtained</label>
+        <input type="number" step="0.01" name="marks_obtained" required>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label>Max Marks</label>
+        <input type="number" step="0.01" name="max_marks" value="100" required>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-success btn-block">Submit Marks</button>
+  </form>
+</div>
+{% endblock %}

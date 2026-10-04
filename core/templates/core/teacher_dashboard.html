@@ -1,0 +1,37 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="header-bar">
+  <h2>Teacher Dashboard</h2>
+  <div>
+    <a href="{% url 'mark_attendance' %}" class="btn btn-primary">Mark Attendance</a>
+    <a href="{% url 'enter_marks' %}" class="btn btn-success">Enter Marks</a>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Assigned Subjects</h3>
+    <ul class="simple-list">
+      {% for subject in subjects %}
+        <li><span><b>{{ subject.code }}</b>: {{ subject.name }}</span></li>
+      {% empty %}
+        <li style="color: #94a3b8;">No subjects assigned.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Students</h3>
+    <ul class="simple-list">
+      {% for student in students %}
+        <li>
+          <span>{{ student.get_full_name|default:student.username }}</span>
+          <small style="color: #64748b;">Roll: {{ student.student_profile.roll_number|default:"N/A" }}</small>
+        </li>
+      {% empty %}
+        <li style="color: #94a3b8;">No students registered.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

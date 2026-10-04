@@ -1,0 +1,44 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2 style="margin-bottom: 20px;">Student Dashboard</h2>
+
+<div class="grid" style="margin-bottom: 25px;">
+  <div class="stat-box">
+    <div class="stat-title">Attendance</div>
+    <div class="stat-value" style="color: #3b82f6;">{{ attendance_percentage }}%</div>
+    <small style="color: #64748b;">{{ present_classes }} of {{ total_classes }} sessions</small>
+  </div>
+  <div class="stat-box" style="border-left-color: #10b981;">
+    <div class="stat-title">Course</div>
+    <div class="stat-value" style="font-size: 1.1rem; margin-top: 8px;">{{ profile.course|default:"Not Enrolled" }}</div>
+  </div>
+  <div class="stat-box" style="border-left-color: #f59e0b;">
+    <div class="stat-title">Roll Number</div>
+    <div class="stat-value" style="font-size: 1.1rem; margin-top: 8px;">{{ profile.roll_number|default:"N/A" }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>Academic Record</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>Exam</th>
+        <th>Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for mark in marks %}
+      <tr>
+        <td>{{ mark.subject.name }}</td>
+        <td>{{ mark.get_exam_type_display }}</td>
+        <td><b>{{ mark.marks_obtained }}</b> / {{ mark.max_marks }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" style="color: #94a3b8;">No marks recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
