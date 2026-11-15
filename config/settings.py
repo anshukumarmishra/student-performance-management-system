@@ -18,17 +18,23 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'your-local-fallback-secret-key
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost,.onrender.com').split(',')
+DEPLOYMENT_HOST = 'student-performance-management-system-1.onrender.com'
+if DEPLOYMENT_HOST not in [host.strip() for host in ALLOWED_HOSTS]:
+    ALLOWED_HOSTS.append(DEPLOYMENT_HOST)
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://student-performance-management-system-31uc.onrender.com',
+    'https://student-performance-management-system-1.onrender.com',
 ]
-# Automatically trust any additional Render hostnames defined in ALLOWED_HOSTS
+# Automatically trust valid exact and wildcard hosts defined in ALLOWED_HOSTS.
 for host in ALLOWED_HOSTS:
     clean_host = host.strip()
-    if clean_host and not clean_host.startswith('.') and clean_host not in ('127.0.0.1', 'localhost'):
-        origin = f"https://{clean_host}"
-        if origin not in CSRF_TRUSTED_ORIGINS:
-            CSRF_TRUSTED_ORIGINS.append(origin)
+    if not clean_host or clean_host == '*':
+        continue
+    if clean_host.startswith('.'):
+        clean_host = f'*.{clean_host[1:]}'
+    origin = f"https://{clean_host}"
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 
 # Application Definition
@@ -125,7 +131,7 @@ STORAGES = {
 # Domain & Email Configuration
 SITE_DOMAIN = os.environ.get(
     'SITE_DOMAIN',
-    '127.0.0.1:8000' if DEBUG else 'student-performance-management-system-31uc.onrender.com'
+    '127.0.0.1:8000' if DEBUG else 'student-performance-management-system-1.onrender.com'
 )
 
 if DEBUG:
