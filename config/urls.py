@@ -20,6 +20,7 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
     
     # Core App Routes (Login, Dashboard, Portals)
     path('', include('core.urls')),
@@ -49,7 +50,7 @@ urlpatterns = [
     path(
         'reset/<uidb64>/<token>/',
         auth_views.PasswordResetConfirmView.as_view(
-            template_name='accounts/password_reset_confirm.html'
+            template_name='registration/password_reset_confirm.html'
         ),
         name='password_reset_confirm',
     ),
@@ -58,7 +59,7 @@ urlpatterns = [
     path(
         'reset/done/',
         auth_views.PasswordResetCompleteView.as_view(
-            template_name='accounts/password_reset_complete.html'
+            template_name='registration/password_reset_complete.html'
         ),
         name='password_reset_complete',
     ),
