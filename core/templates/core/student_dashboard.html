@@ -1,44 +1,266 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<h2 style="margin-bottom: 20px;">Student Dashboard</h2>
-
-<div class="grid" style="margin-bottom: 25px;">
-  <div class="stat-box">
-    <div class="stat-title">Attendance</div>
-    <div class="stat-value" style="color: #3b82f6;">{{ attendance_percentage }}%</div>
-    <small style="color: #64748b;">{{ present_classes }} of {{ total_classes }} sessions</small>
-  </div>
-  <div class="stat-box" style="border-left-color: #10b981;">
-    <div class="stat-title">Course</div>
-    <div class="stat-value" style="font-size: 1.1rem; margin-top: 8px;">{{ profile.course|default:"Not Enrolled" }}</div>
-  </div>
-  <div class="stat-box" style="border-left-color: #f59e0b;">
-    <div class="stat-title">Roll Number</div>
-    <div class="stat-value" style="font-size: 1.1rem; margin-top: 8px;">{{ profile.roll_number|default:"N/A" }}</div>
-  </div>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 style="margin: 0;">Student Dashboard</h2>
+    <div style="font-size: 0.9rem; color: #475569;">
+        <b>{{ profile.course|default:"Course N/A" }}</b> &bull; Roll No: <b>{{ profile.roll_number|default:"N/A" }}</b>
+    </div>
 </div>
 
+<!-- 1. Performance & Attendance KPI Cards -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 25px;">
+    <div class="stat-box" data-tier-color="{{ tier_color|default:'#8b5cf6' }}">
+        <div class="stat-title">Academic Standing</div>
+        <div class="stat-value" data-tier-text-color="{{ tier_color|default:'#8b5cf6' }}" style="font-size: 1.2rem; margin-top: 6px;">
+            {{ performance_tier }}
+        </div>
+    </div>
+
+    <div class="stat-box" style="border-left-color: #3b82f6;">
+        <div class="stat-title">Aggregate Score</div>
+        <div class="stat-value" style="color: #1e293b;">{{ overall_grade_pct }}%</div>
+        <small style="color: #64748b;">Across {{ marks|length }} assessment(s)</small>
+    </div>
+
+    <div class="stat-box" data-attendance-color="{% if overall_attendance < 75 and total_classes > 0 %}#dc2626{% else %}#10b981{% endif %}">
+        <div class="stat-title">Overall Attendance</div>
+        <div class="stat-value" data-attendance-text-color="{% if overall_attendance < 75 and total_classes > 0 %}#dc2626{% else %}#10b981{% endif %}">
+            {{ overall_attendance }}%
+        </div>
+        <small style="color: #64748b;">{{ present_classes }} of {{ total_classes }} sessions</small>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-tier-color]').forEach(function (el) {
+            el.style.borderLeftColor = el.dataset.tierColor || '#8b5cf6';
+        });
+
+        document.querySelectorAll('[data-tier-text-color]').forEach(function (el) {
+            el.style.color = el.dataset.tierTextColor || '#8b5cf6';
+        });
+
+        document.querySelectorAll('[data-attendance-color]').forEach(function (el) {
+            el.style.borderLeftColor = el.dataset.attendanceColor || '#10b981';
+        });
+
+        document.querySelectorAll('[data-attendance-text-color]').forEach(function (el) {
+            el.style.color = el.dataset.attendanceTextColor || '#10b981';
+        });
+    });
+</script>
+
+<!-- 2. Subject-Wise Attendance & Threshold Status -->
+<div class="card" style="margin-bottom: 25px;">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Subject Attendance Overview</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Subject</th>
+                <th>Attended / Total</th>
+                <th>Percentage</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in subject_stats %}
+            <tr style="{% if stat.is_low %}background-color: #fef2f2;{% endif %}">
+                <td><b>{{ stat.subject.code }}</b></td>
+                <td>{{ stat.subject.name }}</td>
+                <td>{{ stat.present }} / {{ stat.total }}</td>
+                <td><b>{{ stat.percentage }}%</b></td>
+                <td>
+                    {% if stat.total == 0 %}
+                        <span style="color: #64748b; font-size: 0.85rem;">No classes yet</span>
+                    {% elif stat.is_low %}
+                        <span style="background-color: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fca5a5;">⚠️ SHORTAGE (&lt;75%)</span>
+                    {% else %}
+                        <span style="background-color: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid #86efac;">GOOD</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="color: #64748b; text-align: center;">No subjects enrolled yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 3. Attendance Heatmap Card with Month Selector -->
+<div class="card" style="margin-bottom: 25px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">Attendance Heatmap</h3>
+        <form method="get" style="display: flex; gap: 8px; align-items: center;">
+            <select name="month" onchange="this.form.submit()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 0.85rem; background: #fff; cursor: pointer;">
+                {% for m_num, m_name in months_list %}
+                    <option value="{{ m_num }}" {% if m_num == month %}selected{% endif %}>{{ m_name }}</option>
+                {% endfor %}
+            </select>
+            <select name="year" onchange="this.form.submit()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 0.85rem; background: #fff; cursor: pointer;">
+                <option value="2025" {% if year == 2025 %}selected{% endif %}>2025</option>
+                <option value="2026" {% if year == 2026 %}selected{% endif %}>2026</option>
+                <option value="2027" {% if year == 2027 %}selected{% endif %}>2027</option>
+            </select>
+        </form>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; text-align: center; font-size: 0.75rem; font-weight: 600; color: #64748b; margin-bottom: 8px;">
+        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+    </div>
+
+    <style>
+        .attendance-cell {
+            height: 44px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            color: #94a3b8;
+        }
+        .attendance-cell.empty-day { background: transparent; border-color: transparent; }
+        .attendance-cell.present { background-color: #d1fae5; border-color: #a7f3d0; color: #065f46; }
+        .attendance-cell.absent { background-color: #fee2e2; border-color: #fecaca; color: #991b1b; }
+        .attendance-day-number { font-size: 0.75rem; font-weight: 500; }
+        .attendance-mark { font-size: 0.7rem; font-weight: bold; margin-top: 2px; }
+        .attendance-mark.present { color: #059669; }
+        .attendance-mark.absent { color: #dc2626; }
+    </style>
+
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px;">
+        {% for week in calendar_weeks %}
+            {% for d in week %}
+                <div class="attendance-cell {% if d.day == 0 %}empty-day{% elif d.status == 'PRESENT' %}present{% elif d.status == 'ABSENT' %}absent{% endif %}">
+                    {% if d.day != 0 %}
+                        <span class="attendance-day-number">{{ d.day }}</span>
+                        {% if d.status == 'PRESENT' %}
+                            <span class="attendance-mark present">✓</span>
+                        {% elif d.status == 'ABSENT' %}
+                            <span class="attendance-mark absent">✕</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 16px; font-size: 0.75rem; color: #475569;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 12px; height: 12px; background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 3px; display: inline-block;"></span> Present (✓)
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="width: 12px; height: 12px; background-color: #fee2e2; border: 1px solid #fecaca; border-radius: 3px; display: inline-block;"></span> Absent (✕)
+        </div>
+    </div>
+</div>
+
+<!-- 4. My Doubts & Solutions Card -->
+<div class="card" style="margin-bottom: 25px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 1.1rem; color: #1e293b;">My Doubts & Solutions</h3>
+        <a href="{% url 'submit_doubt' %}" class="btn btn-primary" style="background-color: #8b5cf6;">+ Ask New Doubt</a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Your Question</th>
+                <th>Status / Teacher Solution</th>
+                <th style="text-align: center;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doubt in doubts %}
+            <tr>
+                <td><b>{{ doubt.subject.name }}</b></td>
+                <td>{{ doubt.question }}</td>
+                <td>
+                    {% if doubt.is_resolved %}
+                        <div style="background-color: #f0fdf4; border-left: 3px solid #10b981; padding: 6px 10px; border-radius: 4px;">
+                            <span style="color: #047857; font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 2px;">RESOLVED</span>
+                            <span style="color: #1e293b;">{{ doubt.answer }}</span>
+                        </div>
+                    {% else %}
+                        <span style="color: #d97706; font-weight: 600; font-size: 0.85rem; background: #fffbeb; padding: 4px 8px; border-radius: 4px; border: 1px solid #fef3c7;">⏳ Pending Review</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center;">
+                    <form method="POST" action="{% url 'delete_doubt' doubt.id %}" onsubmit="return confirm('Are you sure you want to delete this doubt?');" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; cursor: pointer;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color: #64748b; text-align: center;">You haven't asked any doubts yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 5. Academic Record Table -->
 <div class="card">
-  <h3>Academic Record</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Subject</th>
-        <th>Exam</th>
-        <th>Score</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for mark in marks %}
-      <tr>
-        <td>{{ mark.subject.name }}</td>
-        <td>{{ mark.get_exam_type_display }}</td>
-        <td><b>{{ mark.marks_obtained }}</b> / {{ mark.max_marks }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="3" style="color: #94a3b8;">No marks recorded yet.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Academic Record</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Exam</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mark in marks %}
+            <tr>
+                <td>{{ mark.subject.name }}</td>
+                <td>{{ mark.get_exam_type_display }}</td>
+                <td><b>{{ mark.marks_obtained }}</b> / {{ mark.max_marks }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" style="color: #94a3b8; text-align: center;">No marks recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!-- Dynamic Academic Record & Progression Table -->
+<div class="card">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Academic Record & Progression Analysis</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Exam Type</th>
+                <th>Score</th>
+                <th>Trajectory Trend</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in marks_with_trends %}
+            <tr style="{% if item.is_improving %}background-color: #f0fdf4;{% elif item.is_declining %}background-color: #fef2f2;{% endif %}">
+                <td><b>{{ item.subject }}</b></td>
+                <td>{{ item.exam_type }}</td>
+                <td><b>{{ item.obtained }}</b> / {{ item.max_marks }} ({{ item.percentage }}%)</td>
+                <td>
+                    {% if item.trend == "Baseline" %}
+                        <span style="color: #64748b; font-size: 0.8rem; font-weight: 500;">Baseline Score</span>
+                    {% elif item.is_improving %}
+                        <span style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid #86efac;">{{ item.trend }}</span>
+                    {% elif item.is_declining %}
+                        <span style="background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; border: 1px solid #fca5a5;">{{ item.trend }}</span>
+                    {% else %}
+                        <span style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">{{ item.trend }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color: #94a3b8; text-align: center; padding: 15px;">No assessment marks recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

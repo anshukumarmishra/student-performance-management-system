@@ -9,39 +9,102 @@
     body { background-color: #f8fafc; color: #334155; line-height: 1.5; }
     
     /* Navigation */
-    nav { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+    nav { background-color: #1e293b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
     nav a.brand { color: white; text-decoration: none; font-weight: bold; font-size: 1.1rem; }
     .nav-user { display: flex; gap: 15px; align-items: center; font-size: 0.9rem; }
     
+    /* Notification Dropdown Container */
+    .notif-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .notif-bell {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        cursor: pointer;
+        position: relative;
+        padding: 4px;
+        color: #cbd5e1;
+    }
+
+    .notif-bell:hover {
+        color: white;
+    }
+
+    .notif-badge {
+        position: absolute;
+        top: -2px;
+        right: -4px;
+        background-color: #ef4444;
+        color: white;
+        font-size: 0.65rem;
+        font-weight: bold;
+        padding: 2px 5px;
+        border-radius: 9999px;
+    }
+
+    .notif-dropdown {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 35px;
+        width: 300px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        padding: 12px;
+        z-index: 1000;
+        color: #334155;
+    }
+
+    .notif-container:hover .notif-dropdown {
+        display: block;
+    }
+
+    .notif-item {
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.85rem;
+        cursor: pointer;
+    }
+
+    .notif-item:last-child {
+        border-bottom: none;
+    }
+
+    .notif-title {
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 2px;
+    }
+
+    .notif-msg {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+
     /* Container & Layout */
     .container { max-width: 850px; margin: 30px auto; padding: 0 15px; }
     .card { background: white; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 20px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; }
-    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-
-    /* Forms & Inputs */
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.875rem; }
-    .form-group input, .form-group select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; }
     
     /* Buttons */
     .btn { display: inline-block; padding: 8px 14px; border-radius: 4px; border: none; font-weight: 600; font-size: 0.875rem; text-decoration: none; cursor: pointer; }
     .btn-primary { background: #3b82f6; color: white; }
-    .btn-success { background: #10b981; color: white; }
     .btn-danger { background: #ef4444; color: white; }
-    .btn-block { width: 100%; text-align: center; margin-top: 10px; }
 
     /* Tables */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border-bottom: 1px solid #e2e8f0; padding: 10px; text-align: left; font-size: 0.9rem; }
     th { background-color: #f1f5f9; font-weight: 600; }
 
-    /* Lists & Stats */
+    /* Stats */
     .stat-box { background: white; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; }
     .stat-title { font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: 600; }
     .stat-value { font-size: 1.5rem; font-weight: bold; margin-top: 4px; }
-    ul.simple-list { list-style: none; padding: 0; }
-    ul.simple-list li { padding: 10px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; }
   </style>
 </head>
 <body>
@@ -49,6 +112,28 @@
     <a href="{% url 'dashboard' %}" class="brand">SPMS Portal</a>
     {% if user.is_authenticated %}
     <div class="nav-user">
+      
+      <!-- Notification Bell & Dropdown -->
+      <div class="notif-container">
+          <button class="notif-bell" title="Notifications">
+              🔔
+              {% if notifications %}
+                  <span class="notif-badge">{{ notifications|length }}</span>
+              {% endif %}
+          </button>
+          <div class="notif-dropdown">
+              <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; color: #1e293b;">Notifications</div>
+              {% for notif in notifications %}
+                  <div class="notif-item" data-id="{{ notif.id }}" onclick="markAsRead('{{ notif.id }}', this)" title="Click to mark as read">
+                      <div class="notif-title">{{ notif.title }}</div>
+                      <div class="notif-msg">{{ notif.message }}</div>
+                  </div>
+              {% empty %}
+                  <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 10px 0;">No new notifications</div>
+              {% endfor %}
+          </div>
+      </div>
+
       <span>{{ user.username }} ({{ user.role }})</span>
       <a href="{% url 'logout' %}" class="btn btn-danger" style="padding: 4px 10px; font-size: 0.8rem;">Logout</a>
     </div>
@@ -58,5 +143,46 @@
   <main class="container">
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+  function markAsRead(id, element) {
+      fetch(`/notification/read/${id}/`, {
+          method: 'POST',
+          headers: {
+              'X-CSRFToken': '{{ csrf_token }}',
+              'Content-Type': 'application/json'
+          }
+      }).then(response => {
+          if (response.ok) {
+              element.style.transition = 'opacity 0.3s ease';
+              element.style.opacity = '0';
+              setTimeout(() => {
+                  element.remove();
+                  
+                  // Update badge count
+                  const badge = document.querySelector('.notif-badge');
+                  if (badge) {
+                      let count = parseInt(badge.textContent) - 1;
+                      if (count > 0) {
+                          badge.textContent = count;
+                      } else {
+                          badge.remove();
+                      }
+                  }
+
+                  // Check if dropdown is empty
+                  const dropdown = document.querySelector('.notif-dropdown');
+                  const remainingItems = dropdown.querySelectorAll('.notif-item');
+                  if (remainingItems.length === 0) {
+                      const emptyMsg = document.createElement('div');
+                      emptyMsg.style.cssText = 'color: #64748b; font-size: 0.85rem; text-align: center; padding: 10px 0;';
+                      emptyMsg.textContent = 'No new notifications';
+                      dropdown.appendChild(emptyMsg);
+                  }
+              }, 300);
+          }
+      });
+  }
+  </script>
 </body>
 </html>

@@ -1,37 +1,244 @@
 {% extends 'core/base.html' %}
 {% block content %}
-<div class="header-bar">
-  <h2>Teacher Dashboard</h2>
-  <div>
-    <a href="{% url 'mark_attendance' %}" class="btn btn-primary">Mark Attendance</a>
-    <a href="{% url 'enter_marks' %}" class="btn btn-success">Enter Marks</a>
-  </div>
+<h2 style="margin-bottom: 20px; color: #1e293b;">Teacher Dashboard</h2>
+
+<style>
+    .intervention-critical-row {
+        background-color: #fef2f2;
+    }
+</style>
+
+<!-- 1. Quick Management Actions -->
+<div class="grid" style="margin-bottom: 25px;">
+    <div class="card" style="margin-bottom: 0;">
+        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 1.1rem; color: #1e293b;">Quick Management</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{% url 'mark_attendance' %}" class="btn btn-primary">Mark Attendance</a>
+            <a href="{% url 'enter_marks' %}" class="btn btn-primary" style="background-color: #10b981;">Enter Grades</a>
+            <a href="{% url 'add_subject' %}" class="btn btn-primary" style="background-color: #8b5cf6;">+ Add Subject</a>
+            <a href="{% url 'export_attendance_csv' %}" class="btn btn-primary" style="background-color: #0ea5e9;">📥 Export Attendance CSV</a>
+            <a href="{% url 'export_grades_csv' %}" class="btn btn-primary" style="background-color: #6366f1;">📥 Export Grades CSV</a>
+        </div>
+    </div>
 </div>
 
-<div class="grid">
-  <div class="card">
-    <h3>Assigned Subjects</h3>
-    <ul class="simple-list">
-      {% for subject in subjects %}
-        <li><span><b>{{ subject.code }}</b>: {{ subject.name }}</span></li>
-      {% empty %}
-        <li style="color: #94a3b8;">No subjects assigned.</li>
-      {% endfor %}
-    </ul>
-  </div>
+<!-- 2. Unified Academic Intervention Matrix (Performance & Attendance Risk) -->
+<div class="card" style="margin-bottom: 25px; border-left: 4px solid #ef4444;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+        <div>
+            <h3 style="margin: 0; font-size: 1.1rem; color: #991b1b;">Academic Intervention Matrix</h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #64748b;">Automatically flags students falling below 75% attendance or 50% exam average</p>
+        </div>
+        <span style="background: #fee2e2; color: #dc2626; font-size: 0.8rem; font-weight: bold; padding: 4px 10px; border-radius: 9999px;">
+            {{ intervention_list|length }} Flagged
+        </span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Roll Number</th>
+                <th>Student Name</th>
+                <th>Subject</th>
+                <th>Attendance</th>
+                <th>Exam Avg</th>
+                <th>Risk Trigger</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in intervention_list %}
+            <tr style="{% if item.is_critical %}background-color: #fef2f2;{% endif %}">
+                <td><b>{{ item.student.student_profile.roll_number|default:"N/A" }}</b></td>
+                <td>{{ item.student.username }}</td>
+                <td>{{ item.subject.name }}</td>
+                <td>{{ item.att_pct }}{% if item.att_pct != "N/A" %}%{% endif %}</td>
+                <td>{{ item.mark_pct }}</td>
+                <td>
+                    <span style="background: {% if item.is_critical %}#dc2626{% else %}#f59e0b{% endif %}; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">
+                        {{ item.risk_reason }}
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="color: #16a34a; text-align: center; padding: 14px 0;">All students are performing above academic and attendance thresholds.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!-- Teacher Student Counseling & Intervention Log Card -->
+<div class="card" style="margin-bottom: 25px;">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Student Counseling & Intervention Management</h3>
+    
+    <!-- Add Intervention Form -->
+    <form method="POST" action="{% url 'add_intervention_log' %}" style="background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+            <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Select Student</label>
+                <select name="student" required style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;">
+                    {% for s in students %}
+                        <option value="{{ s.id }}">{{ s.username }} (Roll: {{ s.student_profile.roll_number|default:"N/A" }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Select Subject</label>
+                <select name="subject" required style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;">
+                    {% for sub in subjects %}
+                        <option value="{{ sub.id }}">{{ sub.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Intervention Status</label>
+                <select name="status" required style="width: 100%; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;">
+                    <option value="UNDER_OBSERVATION">Under Observation</option>
+                    <option value="IMPROVING">Showing Improvement</option>
+                    <option value="RESOLVED">Resolved / Closed</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Action Plan / Remedial Measure</label>
+            <input type="text" name="action_taken" required placeholder="e.g., Assigned extra practical session and peer mentor" style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem;">
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px;">Detailed Counseling Notes</label>
+            <textarea name="note" rows="2" required placeholder="Record discussion details..." style="width: 100%; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; resize: vertical;"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="background-color: #2563eb; font-size: 0.85rem; padding: 6px 14px;">💾 Log Intervention</button>
+    </form>
 
-  <div class="card">
-    <h3>Students</h3>
-    <ul class="simple-list">
-      {% for student in students %}
-        <li>
-          <span>{{ student.get_full_name|default:student.username }}</span>
-          <small style="color: #64748b;">Roll: {{ student.student_profile.roll_number|default:"N/A" }}</small>
-        </li>
-      {% empty %}
-        <li style="color: #94a3b8;">No students registered.</li>
-      {% endfor %}
-    </ul>
-  </div>
+    <!-- Past Logs Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Subject</th>
+                <th>Action Plan</th>
+                <th>Status</th>
+                <th>Logged Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in intervention_logs %}
+            <tr>
+                <td><b>{{ log.student.username }}</b></td>
+                <td>{{ log.subject.name }}</td>
+                <td>{{ log.action_taken }}</td>
+                <td>
+                    {% if log.status == 'RESOLVED' %}
+                        <span style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">Resolved</span>
+                    {% elif log.status == 'IMPROVING' %}
+                        <span style="background: #e0f2fe; color: #0284c7; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">Improving</span>
+                    {% else %}
+                        <span style="background: #fef3c7; color: #d97706; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;">Under Observation</span>
+                    {% endif %}
+                </td>
+                <td>{{ log.created_at|date:"M d, Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="color: #64748b; text-align: center;">No counseling logs recorded yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<!-- 3. My Subjects List -->
+<div class="card" style="margin-bottom: 25px;">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">My Assigned Subjects</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Subject Code</th>
+                <th>Subject Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for subject in subjects %}
+            <tr>
+                <td><b>{{ subject.code }}</b></td>
+                <td>{{ subject.name }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="2" style="color: #64748b; text-align: center;">No subjects assigned yet. Click "+ Add Subject" above to create one.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 4. Student Doubts Queue Card -->
+<div class="card" style="margin-bottom: 25px;">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Student Doubts Queue</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Subject</th>
+                <th>Question</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doubt in doubts %}
+            <tr>
+                <td><b>{{ doubt.student.username }}</b></td>
+                <td>{{ doubt.subject.name }}</td>
+                <td>{{ doubt.question }}</td>
+                <td>
+                    <form method="post" action="{% url 'answer_doubt' doubt.id %}" style="display: flex; gap: 8px;">
+                        {% csrf_token %}
+                        <input type="text" name="answer" placeholder="Type answer..." required style="padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; outline: none;">
+                        <button type="submit" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem; background-color: #3b82f6;">Resolve</button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color: #64748b; text-align: center;">No pending doubts from students. Great job!</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 5. Broadcast Public Announcement Card -->
+<div class="card" style="margin-bottom: 25px;">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Broadcast Public Announcement</h3>
+    <form method="POST" action="{% url 'post_announcement' %}">
+        {% csrf_token %}
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem; color: #475569;">Announcement Title</label>
+            <input type="text" name="title" required placeholder="e.g. Mid-Term Exam Rescheduled" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; outline: none;">
+        </div>
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.85rem; color: #475569;">Message Details</label>
+            <textarea name="message" rows="3" required placeholder="Write your announcement details here..." style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; outline: none; resize: vertical;"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="background-color: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer;">Post Announcement</button>
+    </form>
+</div>
+
+<!-- 6. Enrolled Students List -->
+<div class="card">
+    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; color: #1e293b;">Enrolled Students List</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Roll Number</th>
+                <th>Student Name</th>
+                <th>Course</th>
+                <th>Semester</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td><b>{{ student.student_profile.roll_number|default:"N/A" }}</b></td>
+                <td>{{ student.username }}</td>
+                <td>{{ student.student_profile.course|default:"N/A" }}</td>
+                <td>{{ student.student_profile.semester|default:"N/A" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color: #64748b; text-align: center;">No students found.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}

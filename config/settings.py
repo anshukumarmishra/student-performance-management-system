@@ -19,18 +19,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-m5m!a0qajk%^a!&vb%_7w%tpqfm5mz+ah4!@8u_qxu3ze@1baj'
+import os
+import dj_database_url
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'your-local-fallback-secret-key')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
-# Inside INSTALLED_APPS, add 'core':
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,6 +41,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # <-- Add here
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -56,7 +55,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -75,12 +74,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}",
+        conn_max_age=600
+    )
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -116,29 +114,29 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+# Email Configuration for Real Gmail SMTP
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'anshumishra777777@gmail.com'
+EMAIL_HOST_PASSWORD = 'ucvr gqlv snza bxww'  # Replace with your generated Google App Password
+DEFAULT_FROM_EMAIL = 'Student Performance Management System <anshumishra777777@gmail.com>'
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+
+# Authentication Settings
 AUTH_USER_MODEL = 'core.CustomUser'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
-# settings.py
 
-# Automatically log out users when they close their browser
+# Session Security Settings
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-
-# Optional: Set session timeout after 30 minutes (1800 seconds) of inactivity as a fallback
 SESSION_COOKIE_AGE = 1800
-
-# Optional: Refresh session expiration on every request
 SESSION_SAVE_EVERY_REQUEST = True
